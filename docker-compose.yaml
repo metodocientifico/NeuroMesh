@@ -1,0 +1,60 @@
+services:
+  django:
+    build: ./app
+    container_name: neuromesh-django-app
+    volumes:
+      - ./app:/usr/src/app
+    env_file:
+      - .env
+    working_dir: /usr/src/app
+    command: bash -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+
+  celery:
+    build: ./celery
+    container_name: neuromesh-celery-worker
+    volumes:
+      - ./app:/usr/src/app
+    working_dir: /usr/src/app
+    command: celery -A myapp worker --loglevel=info
+    depends_on:
+      - django
+      - redis
+      - rabbitmq
+
+  redis:
+    image: redis:latest
+    container_name: neuromesh-redis
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: neuromesh-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  mongodb:
+    image: mongo:latest
+    container_name: neuromesh-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  jupyter:
+    image: jupyter/tensorflow-notebook
+    container_name: neuromesh-jupyter
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebooks:/home/jovyan/work
+
+volumes:
+  mongodb_data:
